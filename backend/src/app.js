@@ -46,7 +46,7 @@ if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
 }
 
-// Import routes
+// Import routes - This was the issue, we need to make sure these files exist
 const authRoutes = require('./routes/auth.routes');
 const userRoutes = require('./routes/user.routes');
 const profileRoutes = require('./routes/profile.routes');
