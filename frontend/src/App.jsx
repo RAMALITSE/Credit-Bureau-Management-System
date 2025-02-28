@@ -1,5 +1,5 @@
 // frontend/src/App.jsx
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth';
 
@@ -13,12 +13,18 @@ import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
-import CreditReport from './pages/consumer/CreditReport';
-import CreditScore from './pages/consumer/CreditScore';
+import NotFound from './pages/NotFound';
+
+// Admin pages
 import AdminDashboard from './pages/admin/AdminDashboard';
 import UserManagement from './pages/admin/UserManagement';
+
+// Lender pages
 import LenderDashboard from './pages/lender/LenderDashboard';
-import NotFound from './pages/NotFound';
+
+// Consumer pages
+import CreditReport from './pages/consumer/CreditReport';
+import CreditScore from './pages/consumer/CreditScore';
 
 function App() {
   const { isAuthenticated, userType, loading } = useAuth();

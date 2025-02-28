@@ -21,11 +21,37 @@ const affectedItemSchema = new mongoose.Schema({
   }
 });
 
+// History Entry Schema - embedded in Dispute
+const historyEntrySchema = new mongoose.Schema({
+  action: {
+    type: String,
+    enum: ['created', 'updated', 'responded', 'resolved', 'rejected'],
+    required: true
+  },
+  actionBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  actionByType: {
+    type: String,
+    enum: ['consumer', 'lender', 'admin'],
+    required: true
+  },
+  timestamp: {
+    type: Date,
+    default: Date.now
+  },
+  notes: {
+    type: String
+  }
+});
+
 // Dispute Schema
 const disputeSchema = new mongoose.Schema({
-  profileId: {
+  userId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'CreditProfile',
+    ref: 'User',
     required: true
   },
   accountId: {
@@ -33,7 +59,7 @@ const disputeSchema = new mongoose.Schema({
     ref: 'CreditAccount',
     required: true
   },
-  initiatedBy: {
+  lenderId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true
@@ -45,83 +71,56 @@ const disputeSchema = new mongoose.Schema({
   },
   description: {
     type: String,
-    required: true
+    required: true,
+    minlength: 10
   },
-  supportingDocuments: {
-    type: [String],
-    default: []
-  },
-  status: {
-    type: String,
-    enum: ['pending', 'investigating', 'resolved', 'rejected', 'canceled'],
-    default: 'pending'
-  },
+  affectedItems: [affectedItemSchema],
+  supportingDocuments: [{
+    type: String
+  }],
   lenderResponse: {
     type: String
   },
-  resolution: {
+  adminResolution: {
     type: String
   },
-  createdAt: {
-    type: Date,
-    default: Date.now
+  status: {
+    type: String,
+    enum: ['pending', 'in_review', 'resolved', 'rejected'],
+    default: 'pending'
   },
-  updatedAt: {
-    type: Date,
-    default: Date.now
-  },
+  history: [historyEntrySchema],
   resolvedAt: {
     type: Date
-  },
-  affectedItems: [affectedItemSchema]
+  }
 }, {
   timestamps: true
 });
 
 // Create indexes
-disputeSchema.index({ profileId: 1 });
+disputeSchema.index({ userId: 1 });
 disputeSchema.index({ accountId: 1 });
+disputeSchema.index({ lenderId: 1 });
 disputeSchema.index({ status: 1 });
 disputeSchema.index({ disputeReason: 1 });
+disputeSchema.index({ createdAt: 1 });
 
-// Get dispute resolution time in days
-disputeSchema.virtual('resolutionTimeDays').get(function() {
-  if (!this.resolvedAt || !this.createdAt) return null;
-  
-  const diffTime = this.resolvedAt - this.createdAt;
+// Virtual for calculating dispute age in days
+disputeSchema.virtual('ageInDays').get(function() {
+  const now = new Date();
+  const created = this.createdAt;
+  const diffTime = Math.abs(now - created);
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   return diffDays;
 });
 
-// Get number of affected items resolved
-disputeSchema.virtual('resolvedItemsCount').get(function() {
-  if (!this.affectedItems || this.affectedItems.length === 0) return 0;
-  
-  return this.affectedItems.filter(item => item.resolved).length;
-});
-
-// Get dispute progress percentage
-disputeSchema.virtual('progressPercentage').get(function() {
-  switch (this.status) {
-    case 'pending':
-      return 0;
-    case 'investigating':
-      return 50;
-    case 'resolved':
-    case 'rejected':
-    case 'canceled':
-      return 100;
-    default:
-      return 0;
+// Virtual for determining if dispute is overdue for resolution (30 days)
+disputeSchema.virtual('isOverdue').get(function() {
+  if (this.status === 'resolved' || this.status === 'rejected') {
+    return false;
   }
+  return this.ageInDays > 30;
 });
-
-// Static method to get recent disputes
-disputeSchema.statics.getRecentDisputes = async function(profileId, limit = 5) {
-  return this.find({ profileId })
-    .sort({ createdAt: -1 })
-    .limit(limit);
-};
 
 const Dispute = mongoose.model('Dispute', disputeSchema);
 

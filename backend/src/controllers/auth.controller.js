@@ -8,71 +8,75 @@ const { createError } = require('../utils/error');
 // @access  Public
 exports.register = async (req, res, next) => {
   try {
-    const {
-      userType,
-      firstName,
-      lastName,
-      email,
-      password,
-      phoneNumber,
-      dateOfBirth,
-      nationalId,
-      address,
-      employmentInfo
-    } = req.body;
-
-    // Check if user already exists
-    const userExists = await User.findOne({ email });
-    if (userExists) {
-      return next(createError('User already exists with this email', 400));
+    // Check if email already exists
+    const existingEmail = await User.findOne({ email: req.body.email });
+    if (existingEmail) {
+      return next(createError('Email address is already in use. Please use a different email.', 400));
     }
-
-    const nationalIdExists = await User.findOne({ nationalId });
-    if (nationalIdExists) {
-      return next(createError('User already exists with this National ID', 400));
+    
+    // Check if national ID already exists
+    const existingNationalId = await User.findOne({ nationalId: req.body.nationalId });
+    if (existingNationalId) {
+      return next(createError('National ID is already registered. Please check and try again.', 400));
     }
-
+    
     // Create new user
-    const user = await User.create({
-      userType,
-      firstName,
-      lastName,
-      email,
-      passwordHash: password,
-      phoneNumber,
-      dateOfBirth,
-      nationalId,
-      address,
-      employmentInfo: userType === 'consumer' ? employmentInfo : undefined
+    const newUser = await User.create({
+      userType: req.body.userType,
+      firstName: req.body.firstName,
+      lastName: req.body.lastName,
+      email: req.body.email,
+      passwordHash: req.body.password, // Will be hashed by the pre-save hook
+      phoneNumber: req.body.phoneNumber,
+      dateOfBirth: req.body.dateOfBirth,
+      nationalId: req.body.nationalId,
+      address: req.body.address,
+      employmentInfo: req.body.userType === 'consumer' ? req.body.employmentInfo : undefined
     });
-
-    // If consumer, create credit profile
-    if (userType === 'consumer') {
+    
+    // If user is a consumer, create a credit profile
+    if (newUser.userType === 'consumer') {
       await CreditProfile.create({
-        userId: user._id,
-        nationalId: user.nationalId
+        userId: newUser._id,
+        nationalId: newUser.nationalId
       });
     }
-
-    // Generate token
-    const token = user.generateAuthToken();
-
-    // Return user data (excluding password)
-    const userData = user.toObject();
-    delete userData.passwordHash;
-
+    
+    // Generate JWT token
+    const token = newUser.generateAuthToken();
+    
+    // Remove sensitive data
+    newUser.passwordHash = undefined;
+    
+    // Set cookie if in production
+    if (process.env.NODE_ENV === 'production') {
+      res.cookie('token', token, {
+        expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+        httpOnly: true,
+        secure: true,
+        sameSite: 'strict'
+      });
+    }
+    
     res.status(201).json({
       status: 'success',
       data: {
-        user: userData,
-        token
+        token,
+        user: newUser
       }
     });
   } catch (error) {
+    // Check for MongoDB duplicate key error
+    if (error.code === 11000) {
+      // Extract the duplicate field
+      const field = Object.keys(error.keyValue)[0];
+      const value = error.keyValue[field];
+      return next(createError(`${field.charAt(0).toUpperCase() + field.slice(1)} "${value}" is already registered. Please use a different ${field}.`, 400));
+    }
+    
     next(error);
   }
 };
-
 // @desc    Login user
 // @route   POST /api/auth/login
 // @access  Public

@@ -1,9 +1,14 @@
 // backend/src/utils/encryption.js
 const crypto = require('crypto');
 
-// Encryption configuration
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY ;
-const IV_LENGTH = 16; // For AES, this is always 16 bytes
+
+// Ensure the encryption key is exactly 32 bytes
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY ? 
+    crypto.createHash('sha256').update(process.env.ENCRYPTION_KEY).digest('hex').substring(0, 32) : 
+    'your-32-character-encryption-key-here'.substring(0, 32);
+const IV_LENGTH = 16;
+
+
 
 /**
  * Encrypt a field value

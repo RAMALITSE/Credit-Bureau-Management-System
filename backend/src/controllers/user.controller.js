@@ -307,3 +307,64 @@ const filterObj = (obj, ...allowedFields) => {
   });
   return newObj;
 };
+
+// @desc    Get user statistics
+// @route   GET /api/users/stats
+// @access  Private/Admin
+exports.getUserStats = async (req, res, next) => {
+  try {
+    // Count total users
+    const totalUsers = await User.countDocuments();
+    
+    // Count users by type
+    const consumerCount = await User.countDocuments({ userType: 'consumer' });
+    const lenderCount = await User.countDocuments({ userType: 'lender' });
+    const adminCount = await User.countDocuments({ userType: 'admin' });
+    
+    // Get recent registrations (last 30 days)
+    const lastMonth = new Date();
+    lastMonth.setDate(lastMonth.getDate() - 30);
+    
+    const recentRegistrations = await User.countDocuments({
+      createdAt: { $gte: lastMonth }
+    });
+    
+    // Get monthly registrations for the last 6 months
+    const monthlyStats = [];
+    for (let i = 0; i < 6; i++) {
+      const endDate = new Date();
+      endDate.setMonth(endDate.getMonth() - i);
+      endDate.setDate(0); // Last day of the previous month
+      
+      const startDate = new Date(endDate);
+      startDate.setDate(1); // First day of the month
+      
+      const count = await User.countDocuments({
+        createdAt: {
+          $gte: startDate,
+          $lte: endDate
+        }
+      });
+      
+      monthlyStats.push({
+        month: startDate.toLocaleString('default', { month: 'short' }),
+        year: startDate.getFullYear(),
+        count
+      });
+    }
+    
+    res.status(200).json({
+      status: 'success',
+      data: {
+        totalUsers,
+        consumerCount,
+        lenderCount,
+        adminCount,
+        recentRegistrations,
+        monthlyStats: monthlyStats.reverse() // Chronological order
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};

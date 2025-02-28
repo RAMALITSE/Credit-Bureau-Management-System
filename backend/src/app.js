@@ -64,6 +64,7 @@ app.use('/api/reports', reportRoutes);
 app.use('/api/inquiries', inquiryRoutes);
 app.use('/api/disputes', disputeRoutes);
 
+
 // Health check route
 app.get('/api/health', (req, res) => {
   res.status(200).json({

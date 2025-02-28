@@ -47,33 +47,80 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   // Login user
-  const login = async (email, password) => {
-    setLoading(true);
-    setError(null);
+// Login user
+// Login user with enhanced debugging
+const login = async (email, password) => {
+  setLoading(true);
+  setError(null);
+  
+  try {
+    // Check if the API URL is defined
+    const apiUrl = import.meta.env.VITE_API_URL;
+    console.log("API URL:", apiUrl); 
+    console.log("Login attempt with:", { email }); // Log email but not password for security
     
-    try {
-      const response = await axios.post(`${import.meta.env.VITE_API_URL}/auth/login`, {
-        email,
-        password
-      });
-      
+    if (!apiUrl) {
+      throw new Error('API URL is not defined in environment variables');
+    }
+    
+    // Debug request configuration
+    const requestConfig = {
+      url: `${apiUrl}/auth/login`,
+      method: 'post',
+      data: { email, password },
+      validateStatus: false // To capture all status codes for debugging
+    };
+    
+    console.log("Request config:", { 
+      url: requestConfig.url, 
+      method: requestConfig.method,
+      headers: axios.defaults.headers.common // Log current headers
+    });
+    
+    // Make the request
+    const response = await axios(requestConfig);
+    
+    // Log full response for debugging
+    console.log("Full response:", {
+      status: response.status,
+      statusText: response.statusText,
+      headers: response.headers,
+      data: response.data
+    });
+    
+    // Check if status is success
+    if (response.status === 200 && response.data.status === 'success' && response.data.data?.token) {
       const { token, user } = response.data.data;
       
-      // Save token and set user
+      // Save token and set authentication
       localStorage.setItem('token', token);
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      
+      // Update state
       setUser(user);
       setIsAuthenticated(true);
       
       return true;
-    } catch (err) {
-      setError(err.response?.data?.message || 'Login failed. Please try again.');
-      return false;
-    } finally {
-      setLoading(false);
+    } else {
+      // This will help identify specific error messages from your API
+      console.warn("Authentication failed with response:", response.data);
+      throw new Error(response.data?.message || 'Authentication failed');
     }
-  };
-
+  } catch (err) {
+    console.error('Login error details:', {
+      message: err.message,
+      response: err.response?.data,
+      status: err.response?.status,
+      headers: err.response?.headers
+    });
+    
+    // Set detailed error message
+    setError(err.response?.data?.message || err.message || 'Login failed. Please try again.');
+    return false;
+  } finally {
+    setLoading(false);
+  }
+};
   // Register user
   const register = async (userData) => {
     setLoading(true);

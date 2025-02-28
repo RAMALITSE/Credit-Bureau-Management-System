@@ -17,6 +17,7 @@ router.use(restrictTo('admin'));
 
 // Get all users - admin only
 router.get('/', userController.getAllUsers);
+router.get('/stats', protect, restrictTo('admin'), userController.getUserStats);
 
 // Get, update, delete specific user - admin only
 router.route('/:id')
