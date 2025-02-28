@@ -1,4 +1,4 @@
-// frontend/src/App.jsx
+// frontend/src/App.jsx (Updated with new admin routes)
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth';
@@ -18,6 +18,8 @@ import NotFound from './pages/NotFound';
 // Admin pages
 import AdminDashboard from './pages/admin/AdminDashboard';
 import UserManagement from './pages/admin/UserManagement';
+import UserDetail from './pages/admin/UserDetail';
+// import UserCreate from './pages/admin/UserCreate';
 
 // Lender pages
 import LenderDashboard from './pages/lender/LenderDashboard';
@@ -102,11 +104,29 @@ function App() {
             </ProtectedRoute>
           } 
         />
+        
+        {/* Admin User Management Routes */}
         <Route 
           path="admin/users" 
           element={
             <ProtectedRoute allowedRoles={['admin']}>
               <UserManagement />
+            </ProtectedRoute>
+          } 
+        />
+        {/* <Route 
+          path="admin/users/new" 
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <UserCreate />
+            </ProtectedRoute>
+          } 
+        /> */}
+        <Route 
+          path="admin/users/:id" 
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <UserDetail />
             </ProtectedRoute>
           } 
         />
