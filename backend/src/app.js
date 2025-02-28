@@ -28,10 +28,25 @@ app.use(cors({
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
-  message: 'Too many requests from this IP, please try again later.'
+  max: 1000, // Increased from 100 to 1000 requests per windowMs
+  message: 'Too many requests from this IP, please try again later.',
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
 });
-app.use('/api', limiter);
+
+// Apply to all auth routes specifically
+app.use('/api/auth/login', limiter);
+app.use('/api/auth/register', limiter);
+
+
+// Use a more lenient limiter for all other API routes
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5000, // Allow 5000 requests per windowMs for regular API usage
+  message: 'Too many API requests from this IP, please try again later.'
+});
+app.use('/api', apiLimiter);
+
 
 // Body parser middleware
 app.use(express.json({ limit: '10kb' }));

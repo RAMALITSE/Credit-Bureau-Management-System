@@ -138,10 +138,10 @@ const AdminDashboard = () => {
           try {
             // Debug token to ensure it exists and is being sent correctly
             const token = localStorage.getItem('token');
-            console.log('Auth token:', token ? 'Token exists' : 'Token missing');
+//console.log('Auth token:', token ? 'Token exists' : 'Token missing');
             
             // Log current headers to check Authorization header
-            console.log('Current headers:', axios.defaults.headers.common);
+           // console.log('Current headers:', axios.defaults.headers.common);
             
             // Make sure the token is set in axios defaults
             if (token) {
@@ -173,7 +173,7 @@ const AdminDashboard = () => {
             return mockData.disputes;
           }
         };
-        
+
         
         // Fetch all data in parallel
         const [usersData, profilesData, accountsData, disputesData] = await Promise.all([
